@@ -1,0 +1,44 @@
+---
+- name: Install Apache2 and stop-rollback when error
+  hosts: all
+  become: yes
+  become_method: sudo
+
+  tasks:
+  - name: Check and print linux version
+    debug: var=ansible_os_family
+
+  - block:    #Install for REDHAT
+
+     - name: Install Apache for REDHAT
+       yum: name=httpd state=latest
+
+     - name: Start Apache for REDHAT
+       service: name=httpd state=started enabled=yes
+    when: ansible_os_family == "RedHat"
+
+  - block:    #Install for Debian
+
+     - name: Install Apache for Debian
+       apt: name=apache2 state=latest
+
+     - name: Start Apache for REDHAT
+       service: name=apache2 state=started enabled=yes
+    when: ansible_os_family == "Debian"P
+
+  - name: Copy files to web directory
+    copy: src={{ item }} dest={{ destin_folder }} mode=0555
+    with_fileglob: "{{ source_folder }}/*.*"
+
+    notify:
+        - Restart Apache RedHat
+        - Restart Apache Debian
+
+  handlers:
+   - name: Restart Apache RedHat
+     service: name=httpd state=restarted
+     when: ansible_os_family == "RedHat"
+
+   - name: Restart Apache Debian
+     service: name=apache2 state=restarted
+     when: ansible_os_family == "Debian"
