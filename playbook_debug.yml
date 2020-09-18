@@ -1,0 +1,59 @@
+---
+- name: Install Apache2 and debug
+  hosts: all
+  become: yes
+  any_errors_fatal: true
+  become_method: sudo
+
+  tasks:
+  - name: Check and print linux version
+    debug: var=ansible_os_family
+
+  - block:    #Install for REDHAT
+
+     - name: Install Apache for REDHAT
+       yum: name=httpd state=latest
+       register: results
+
+     - name: Downgrade Httpd from RedHat
+       yum:
+        name: 
+         - httpd-2.4.37-21.module_el8.2.0+382+15b0afa8.x86_64
+        state: present
+        allow_downgrade: true
+        update_cache: true
+       when: results.rc != 0
+
+     - name: Start Apache for REDHAT
+       service: name=httpd state=started enabled=yes
+    when: ansible_os_family == "RedHat"
+
+  - block:    #Install for Debian
+
+     - name: Install Apache for Debian
+       apt: name=apache2 state=latest
+       register: results
+
+     - name: Downgrade Apache2 from Debian
+       shell: apt install -y apache2=2.4.38-3+deb10u4
+       when: results.failed != false
+
+     - name: Start Apache for Debian
+       service: name=apache2 state=started enabled=yes
+    when: ansible_os_family == "Debian"
+
+  - debug:
+      var: results
+
+    notify:
+        - Restart Apache RedHat
+        - Restart Apache Debian
+
+  handlers:
+   - name: Restart Apache RedHat
+     service: name=httpd state=restarted
+     when: ansible_os_family == "RedHat"
+
+   - name: Restart Apache Debian
+     service: name=apache2 state=restarted
+     when: ansible_os_family == "Debian"
