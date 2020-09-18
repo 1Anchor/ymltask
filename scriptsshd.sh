@@ -71,13 +71,24 @@ do
         cat $HOME/.ssh/id_rsa.pub | sshpass -p "${pass}" ssh root@${ip} 'mkdir -p $HOME/.ssh && cat >> ~/.ssh/authorized_keys' > /dev/null 2>&1
         if [ "$?" = "0" ]; then
             echo "key successfully added to $ip"
-          for pkg in ${!PACKAGES[@]}
-            do  
-                package=${PACKAGES[$pkg]}
-                # вызываем функцию в которой происходит установка
-                installPkg $package
-            done
-                else
+          
+            ssh ${ip} -l root "apt update" > /dev/null 2>&1
+            if [ "$?" = "0" ]; then
+                echo "Update package to $ip"
+
+                # проходимся по списку пакетов
+                for pkg in ${!PACKAGES[@]}
+                do  
+                    package=${PACKAGES[$pkg]}
+                    # вызываем функцию в которой происходит установка
+                    installPkg $package
+                done
+
+            else
+                echo "Error update package to $ip"
+            fi
+          
+        else
             echo "Authorization Error"
         fi
     fi
